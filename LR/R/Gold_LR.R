@@ -5,10 +5,10 @@ library(caTools)
 library(readxl)
 
 # Đọc dữ liệu từ file Excel
-df <- read_excel("E:/Code/STAT3013.-P12_Nhom4/Dataset/Gold_data_filtered - Copy.xlsx")
+df <- read_excel("E:\\Code\\STAT3013.-P12_Nhom4\\Dataset\\Gold_data_filtered.xlsx")
 
-# Chuyển đổi cột date thành số
-df$date_numeric <- as.numeric(as.Date(df$date, format = "%Y-%m-%d"))
+# Thêm cột index để sử dụng làm biến đầu vào
+df$index <- 1:nrow(df)
 
 # Đặt seed để kết quả có thể tái hiện
 set.seed(123)
@@ -42,15 +42,15 @@ validation_5_3_2 <- subset(remaining_5_3_2, split_3 == FALSE)
 
 # Tạo hàm để huấn luyện mô hình, in summary và dự đoán giá vàng 30 ngày tiếp theo
 predict_next_30_days <- function(train_data, original_data) {
-  # Huấn luyện mô hình hồi quy tuyến tính
-  model <- lm(close ~ date_numeric, data = train_data)
+  # Huấn luyện mô hình hồi quy tuyến tính sử dụng cột index
+  model <- lm(close ~ index, data = train_data)
   
   # In thông tin chi tiết về mô hình
   print(summary(model))
   
   # Tạo dữ liệu dự đoán cho 30 ngày tiếp theo
-  last_date <- max(train_data$date_numeric)
-  next_30_days <- data.frame(date_numeric = (last_date + 1):(last_date + 30))
+  last_index <- max(train_data$index)
+  next_30_days <- data.frame(index = (last_index + 1):(last_index + 30))
   
   # Dự đoán giá vàng
   next_30_days$predicted_close <- predict(model, newdata = next_30_days)
@@ -79,18 +79,17 @@ print(next_30_days_6_3_1)
 print("Dự đoán giá vàng 30 ngày tiếp theo cho tỷ lệ 5:3:2:")
 print(next_30_days_5_3_2)
 
+# Vẽ đồ thị cho từng tập dự đoán
 library(ggplot2)
 
-# Vẽ đồ thị cho từng tập dự đoán
 plot_predictions <- function(original_data, next_30_days, title) {
   ggplot() +
-    geom_line(data = original_data, aes(x = date_numeric, y = close), color = "blue") +
-    geom_line(data = next_30_days, aes(x = date_numeric, y = predicted_close), color = "red") +
-    labs(title = title, x = "Ngày (numeric)", y = "Giá vàng")
+    geom_line(data = original_data, aes(x = index, y = close), color = "blue") +
+    geom_line(data = next_30_days, aes(x = index, y = predicted_close), color = "red") +
+    labs(title = title, x = "Index", y = "Gold Price")
 }
 
 # Vẽ đồ thị cho từng tỷ lệ chia
-plot_predictions(df, next_30_days_7_2_1, "Dự đoán giá vàng 30 ngày tiếp theo (Tỷ lệ 7:2:1)")
-plot_predictions(df, next_30_days_6_3_1, "Dự đoán giá vàng 30 ngày tiếp theo (Tỷ lệ 6:3:1)")
-plot_predictions(df, next_30_days_5_3_2, "Dự đoán giá vàng 30 ngày tiếp theo (Tỷ lệ 5:3:2)")
-
+plot_predictions(df, next_30_days_7_2_1, "Gold price for the next 30 days (Scale 7:2:1)")
+plot_predictions(df, next_30_days_6_3_1, "Gold price for the next 30 days (Scale 6:3:1)")
+plot_predictions(df, next_30_days_5_3_2, "Gold price for the next 30 days (Scale 5:3:2)")
