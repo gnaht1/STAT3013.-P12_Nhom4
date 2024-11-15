@@ -1,95 +1,275 @@
-# Cài đặt gói nếu chưa có
-install.packages("caTools")
-install.packages("readxl")
-library(caTools)
+# Import các thư viện cần thiết
+# Import các thư viện cần thiết
 library(readxl)
+library(caret)
+library(ggplot2)
+library(scales)
 
-# Đọc dữ liệu từ file Excel
-df <- read_excel("E:\\Code\\STAT3013.-P12_Nhom4\\Dataset\\Gold_data_filtered.xlsx")
+# Tải dữ liệu từ file Excel (chỉnh sửa đường dẫn nếu cần)
+df <- read_excel("E:/Code/STAT3013.-P12_Nhom4/Dataset/Gold_data_filtered.xlsx")
 
-# Thêm cột index để sử dụng làm biến đầu vào
+# Thêm cột 'index' để sử dụng làm biến độc lập
 df$index <- 1:nrow(df)
 
-# Đặt seed để kết quả có thể tái hiện
-set.seed(123)
+# Chuyển cột 'index' thành một data frame để chuẩn hóa
+index_df <- data.frame(index = df$index)
 
-# Chia dữ liệu theo tỷ lệ 7:2:1
-split_7_2_1 <- sample.split(df$close, SplitRatio = 0.7)
-train_7_2_1 <- subset(df, split_7_2_1 == TRUE)
-remaining_7_2_1 <- subset(df, split_7_2_1 == FALSE)
+# Chuẩn hóa cột 'index' để cải thiện hiệu suất mô hình dựa trên tập huấn luyện
+scaler <- preProcess(index_df, method = c("center", "scale"))
+df$index_normalized <- predict(scaler, index_df)$index
 
-split_2 <- sample.split(remaining_7_2_1$close, SplitRatio = 2/3)
-test_7_2_1 <- subset(remaining_7_2_1, split_2 == TRUE)
-validation_7_2_1 <- subset(remaining_7_2_1, split_2 == FALSE)
+# Phân chia dữ liệu thành tập huấn luyện, kiểm tra và xác thực (70:20:10)
+train_size <- floor(0.7 * nrow(df))
+test_size <- floor(0.2 * nrow(df))
+val_size <- nrow(df) - train_size - test_size
 
-# Chia dữ liệu theo tỷ lệ 6:3:1
-split_6_3_1 <- sample.split(df$close, SplitRatio = 0.6)
-train_6_3_1 <- subset(df, split_6_3_1 == TRUE)
-remaining_6_3_1 <- subset(df, split_6_3_1 == FALSE)
+train_data <- df[1:train_size, ]
+test_data <- df[(train_size + 1):(train_size + test_size), ]
+val_data <- df[(train_size + test_size + 1):nrow(df), ]
 
-split_3 <- sample.split(remaining_6_3_1$close, SplitRatio = 3/4)
-test_6_3_1 <- subset(remaining_6_3_1, split_3 == TRUE)
-validation_6_3_1 <- subset(remaining_6_3_1, split_3 == FALSE)
+# Chuẩn bị dữ liệu cho huấn luyện mô hình
+x_train <- train_data$index_normalized
+y_train <- train_data$close
 
-# Chia dữ liệu theo tỷ lệ 5:3:2
-split_5_3_2 <- sample.split(df$close, SplitRatio = 0.5)
-train_5_3_2 <- subset(df, split_5_3_2 == TRUE)
-remaining_5_3_2 <- subset(df, split_5_3_2 == FALSE)
+# Huấn luyện mô hình hồi quy tuyến tính
+model <- lm(y_train ~ x_train)
 
-split_3 <- sample.split(remaining_5_3_2$close, SplitRatio = 3/5)
-test_5_3_2 <- subset(remaining_5_3_2, split_3 == TRUE)
-validation_5_3_2 <- subset(remaining_5_3_2, split_3 == FALSE)
+# Dự đoán trên tập kiểm tra
+x_test <- test_data$index_normalized
+y_test <- test_data$close
+y_pred_test <- predict(model, newdata = data.frame(x_train = x_test))
 
-# Tạo hàm để huấn luyện mô hình, in summary và dự đoán giá vàng 30 ngày tiếp theo
-predict_next_30_days <- function(train_data, original_data) {
-  # Huấn luyện mô hình hồi quy tuyến tính sử dụng cột index
-  model <- lm(close ~ index, data = train_data)
-  
-  # In thông tin chi tiết về mô hình
-  print(summary(model))
-  
-  # Tạo dữ liệu dự đoán cho 30 ngày tiếp theo
-  last_index <- max(train_data$index)
-  next_30_days <- data.frame(index = (last_index + 1):(last_index + 30))
-  
-  # Dự đoán giá vàng
-  next_30_days$predicted_close <- predict(model, newdata = next_30_days)
-  
-  # Trả về kết quả dự đoán
-  return(next_30_days)
-}
+# Đánh giá lỗi trên tập kiểm tra (MAE, RMSE, MAPE)
+mae_test <- mean(abs(y_test - y_pred_test))
+rmse_test <- sqrt(mean((y_test - y_pred_test)^2))
+mape_test <- mean(abs((y_test - y_pred_test) / y_test)) * 100
 
-# Dự đoán và in summary cho các tỷ lệ chia dữ liệu
-print("Tóm tắt mô hình cho tỷ lệ 7:2:1:")
-next_30_days_7_2_1 <- predict_next_30_days(train_7_2_1, df)
+# Kết quả lỗi trên tập kiểm tra
+cat("MAE (Test):", mae_test, "\n")
+cat("RMSE (Test):", rmse_test, "\n")
+cat("MAPE (Test):", mape_test, "\n")
 
-print("Tóm tắt mô hình cho tỷ lệ 6:3:1:")
-next_30_days_6_3_1 <- predict_next_30_days(train_6_3_1, df)
+# Dự đoán trên tập xác thực
+x_val <- val_data$index_normalized
+y_val <- val_data$close
+y_pred_val <- predict(model, newdata = data.frame(x_train = x_val))
 
-print("Tóm tắt mô hình cho tỷ lệ 5:3:2:")
-next_30_days_5_3_2 <- predict_next_30_days(train_5_3_2, df)
+# Đánh giá lỗi trên tập xác thực (MAE, RMSE, MAPE)
+mae_val <- mean(abs(y_val - y_pred_val))
+rmse_val <- sqrt(mean((y_val - y_pred_val)^2))
+mape_val <- mean(abs((y_val - y_pred_val) / y_val)) * 100
 
-# Hiển thị kết quả dự đoán
-print("Dự đoán giá vàng 30 ngày tiếp theo cho tỷ lệ 7:2:1:")
-print(next_30_days_7_2_1)
+# Kết quả lỗi trên tập xác thực
+cat("MAE (Validation):", mae_val, "\n")
+cat("RMSE (Validation):", rmse_val, "\n")
+cat("MAPE (Validation):", mape_val, "\n")
 
-print("Dự đoán giá vàng 30 ngày tiếp theo cho tỷ lệ 6:3:1:")
-print(next_30_days_6_3_1)
+# Dự đoán cho 30 ngày tiếp theo
+last_index <- max(df$index)
+new_indices <- (last_index + 1):(last_index + 30)
+new_indices_df <- data.frame(index = new_indices)
+new_indices_normalized <- predict(scaler, new_indices_df)$index
+future_predictions <- predict(model, newdata = data.frame(x_train = new_indices_normalized))
 
-print("Dự đoán giá vàng 30 ngày tiếp theo cho tỷ lệ 5:3:2:")
-print(next_30_days_5_3_2)
+# Tạo data frame cho từng phần dữ liệu
+train_data_plot <- data.frame(Index = train_data$index, Price = y_train, Type = "Train")
+test_data_plot <- data.frame(Index = test_data$index, Price = y_test, Type = "Test")
+validate_data_plot <- data.frame(Index = val_data$index, Price = y_val, Type = "Validate")
+predictions_test_plot <- data.frame(Index = test_data$index, Price = y_pred_test, Type = "Predictions (Test)")
+predictions_val_plot <- data.frame(Index = val_data$index, Price = y_pred_val, Type = "Predictions (Validate)")
+next_30_days_plot <- data.frame(Index = new_indices, Price = future_predictions, Type = "Next 30 Days")
 
-# Vẽ đồ thị cho từng tập dự đoán
-library(ggplot2)
+# Gộp tất cả vào một data frame cho ggplot
+plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot, 
+                   predictions_test_plot, predictions_val_plot, next_30_days_plot)
 
-plot_predictions <- function(original_data, next_30_days, title) {
-  ggplot() +
-    geom_line(data = original_data, aes(x = index, y = close), color = "blue") +
-    geom_line(data = next_30_days, aes(x = index, y = predicted_close), color = "red") +
-    labs(title = title, x = "Index", y = "Gold Price")
-}
+# Vẽ biểu đồ
+ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
+  geom_line() +
+  labs(title = "Gold Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Gold Price") +
+  scale_color_manual(values = c("Train" = "blue", 
+                                "Test" = "green", 
+                                "Validate" = "purple", 
+                                "Predictions (Test)" = "orange",
+                                "Predictions (Validate)" = "pink",
+                                "Next 30 Days" = "red")) +
+  theme_minimal()
 
-# Vẽ đồ thị cho từng tỷ lệ chia
-plot_predictions(df, next_30_days_7_2_1, "Gold price for the next 30 days (Scale 7:2:1)")
-plot_predictions(df, next_30_days_6_3_1, "Gold price for the next 30 days (Scale 6:3:1)")
-plot_predictions(df, next_30_days_5_3_2, "Gold price for the next 30 days (Scale 5:3:2)")
+# Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
+future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
+print("Dự đoán giá vàng cho 30 ngày tiếp theo:")
+print(future_data)
+
+
+
+  # Phân chia dữ liệu thành tập huấn luyện, kiểm tra và xác thực (60:30:10)
+train_size <- floor(0.6 * nrow(df))
+test_size <- floor(0.3 * nrow(df))
+val_size <- nrow(df) - train_size - test_size
+
+train_data <- df[1:train_size, ]
+test_data <- df[(train_size + 1):(train_size + test_size), ]
+val_data <- df[(train_size + test_size + 1):nrow(df), ]
+
+# Chuẩn bị dữ liệu cho huấn luyện mô hình
+x_train <- train_data$index_normalized
+y_train <- train_data$close
+
+# Huấn luyện mô hình hồi quy tuyến tính
+model <- lm(y_train ~ x_train)
+
+# Dự đoán trên tập kiểm tra
+x_test <- test_data$index_normalized
+y_test <- test_data$close
+y_pred_test <- predict(model, newdata = data.frame(x_train = x_test))
+
+# Đánh giá lỗi trên tập kiểm tra (MAE, RMSE, MAPE)
+mae_test <- mean(abs(y_test - y_pred_test))
+rmse_test <- sqrt(mean((y_test - y_pred_test)^2))
+mape_test <- mean(abs((y_test - y_pred_test) / y_test)) * 100
+
+# Kết quả lỗi trên tập kiểm tra
+cat("MAE (Test):", mae_test, "\n")
+cat("RMSE (Test):", rmse_test, "\n")
+cat("MAPE (Test):", mape_test, "\n")
+
+# Dự đoán trên tập xác thực
+x_val <- val_data$index_normalized
+y_val <- val_data$close
+y_pred_val <- predict(model, newdata = data.frame(x_train = x_val))
+
+# Đánh giá lỗi trên tập xác thực (MAE, RMSE, MAPE)
+mae_val <- mean(abs(y_val - y_pred_val))
+rmse_val <- sqrt(mean((y_val - y_pred_val)^2))
+mape_val <- mean(abs((y_val - y_pred_val) / y_val)) * 100
+
+# Kết quả lỗi trên tập xác thực
+cat("MAE (Validation):", mae_val, "\n")
+cat("RMSE (Validation):", rmse_val, "\n")
+cat("MAPE (Validation):", mape_val, "\n")
+
+# Dự đoán cho 30 ngày tiếp theo
+last_index <- max(df$index)
+new_indices <- (last_index + 1):(last_index + 30)
+new_indices_df <- data.frame(index = new_indices)
+new_indices_normalized <- predict(scaler, new_indices_df)$index
+future_predictions <- predict(model, newdata = data.frame(x_train = new_indices_normalized))
+
+# Tạo data frame cho từng phần dữ liệu
+train_data_plot <- data.frame(Index = train_data$index, Price = y_train, Type = "Train")
+test_data_plot <- data.frame(Index = test_data$index, Price = y_test, Type = "Test")
+validate_data_plot <- data.frame(Index = val_data$index, Price = y_val, Type = "Validate")
+predictions_test_plot <- data.frame(Index = test_data$index, Price = y_pred_test, Type = "Predictions (Test)")
+predictions_val_plot <- data.frame(Index = val_data$index, Price = y_pred_val, Type = "Predictions (Validate)")
+next_30_days_plot <- data.frame(Index = new_indices, Price = future_predictions, Type = "Next 30 Days")
+
+# Gộp tất cả vào một data frame cho ggplot
+plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot, 
+                   predictions_test_plot, predictions_val_plot, next_30_days_plot)
+
+# Vẽ biểu đồ
+ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
+  geom_line() +
+  labs(title = "Gold Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Gold Price") +
+  scale_color_manual(values = c("Train" = "blue", 
+                                "Test" = "green", 
+                                "Validate" = "purple", 
+                                "Predictions (Test)" = "orange",
+                                "Predictions (Validate)" = "pink",
+                                "Next 30 Days" = "red")) +
+  theme_minimal()
+
+# Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
+future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
+print("Dự đoán giá vàng cho 30 ngày tiếp theo:")
+print(future_data)
+
+
+# Phân chia dữ liệu thành tập huấn luyện, kiểm tra và xác thực (50:30:20)
+
+train_size <- floor(0.5 * nrow(df))
+test_size <- floor(0.3 * nrow(df))
+val_size <- nrow(df) - train_size - test_size
+
+train_data <- df[1:train_size, ]
+test_data <- df[(train_size + 1):(train_size + test_size), ]
+val_data <- df[(train_size + test_size + 1):nrow(df), ]
+
+# Chuẩn bị dữ liệu cho huấn luyện mô hình
+x_train <- train_data$index_normalized
+y_train <- train_data$close
+
+# Huấn luyện mô hình hồi quy tuyến tính
+model <- lm(y_train ~ x_train)
+
+# Dự đoán trên tập kiểm tra
+x_test <- test_data$index_normalized
+y_test <- test_data$close
+y_pred_test <- predict(model, newdata = data.frame(x_train = x_test))
+
+# Đánh giá lỗi trên tập kiểm tra (MAE, RMSE, MAPE)
+mae_test <- mean(abs(y_test - y_pred_test))
+rmse_test <- sqrt(mean((y_test - y_pred_test)^2))
+mape_test <- mean(abs((y_test - y_pred_test) / y_test)) * 100
+
+# Kết quả lỗi trên tập kiểm tra
+cat("MAE (Test):", mae_test, "\n")
+cat("RMSE (Test):", rmse_test, "\n")
+cat("MAPE (Test):", mape_test, "\n")
+
+# Dự đoán trên tập xác thực
+x_val <- val_data$index_normalized
+y_val <- val_data$close
+y_pred_val <- predict(model, newdata = data.frame(x_train = x_val))
+
+# Đánh giá lỗi trên tập xác thực (MAE, RMSE, MAPE)
+mae_val <- mean(abs(y_val - y_pred_val))
+rmse_val <- sqrt(mean((y_val - y_pred_val)^2))
+mape_val <- mean(abs((y_val - y_pred_val) / y_val)) * 100
+
+# Kết quả lỗi trên tập xác thực
+cat("MAE (Validation):", mae_val, "\n")
+cat("RMSE (Validation):", rmse_val, "\n")
+cat("MAPE (Validation):", mape_val, "\n")
+
+# Dự đoán cho 30 ngày tiếp theo
+last_index <- max(df$index)
+new_indices <- (last_index + 1):(last_index + 30)
+new_indices_df <- data.frame(index = new_indices)
+new_indices_normalized <- predict(scaler, new_indices_df)$index
+future_predictions <- predict(model, newdata = data.frame(x_train = new_indices_normalized))
+
+# Tạo data frame cho từng phần dữ liệu
+train_data_plot <- data.frame(Index = train_data$index, Price = y_train, Type = "Train")
+test_data_plot <- data.frame(Index = test_data$index, Price = y_test, Type = "Test")
+validate_data_plot <- data.frame(Index = val_data$index, Price = y_val, Type = "Validate")
+predictions_test_plot <- data.frame(Index = test_data$index, Price = y_pred_test, Type = "Predictions (Test)")
+predictions_val_plot <- data.frame(Index = val_data$index, Price = y_pred_val, Type = "Predictions (Validate)")
+next_30_days_plot <- data.frame(Index = new_indices, Price = future_predictions, Type = "Next 30 Days")
+
+# Gộp tất cả vào một data frame cho ggplot
+plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot, 
+                   predictions_test_plot, predictions_val_plot, next_30_days_plot)
+
+# Vẽ biểu đồ
+ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
+  geom_line() +
+  labs(title = "Gold Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Gold Price") +
+  scale_color_manual(values = c("Train" = "blue", 
+                                "Test" = "green", 
+                                "Validate" = "purple", 
+                                "Predictions (Test)" = "orange",
+                                "Predictions (Validate)" = "pink",
+                                "Next 30 Days" = "red")) +
+  theme_minimal()
+
+# Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
+future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
+print("Dự đoán giá vàng cho 30 ngày tiếp theo:")
+print(future_data)
+
+
+

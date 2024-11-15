@@ -1,12 +1,11 @@
 # Import các thư viện cần thiết
-# Import các thư viện cần thiết
 library(readxl)
 library(caret)
 library(ggplot2)
 library(scales)
 
 # Tải dữ liệu từ file Excel (chỉnh sửa đường dẫn nếu cần)
-df <- read_excel("E:/Code/STAT3013.-P12_Nhom4/Dataset/Silver_data_filtered.xlsx")
+df <- read_excel("E:/Code/STAT3013.-P12_Nhom4/Dataset/Platinum_data_filtered.xlsx")
 
 # Thêm cột 'index' để sử dụng làm biến độc lập
 df$index <- 1:nrow(df)
@@ -86,8 +85,8 @@ plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot,
 # Vẽ biểu đồ
 ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
   geom_line() +
-  labs(title = "Silver Price Predictions: Train, Test, Validate, and Next 30 Days",
-       x = "Index", y = "Silver Price") +
+  labs(title = "Platinum Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Platinum Price") +
   scale_color_manual(values = c("Train" = "blue", 
                                 "Test" = "green", 
                                 "Validate" = "purple", 
@@ -98,7 +97,7 @@ ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
 
 # Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
 future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
-print("Dự đoán giá bạc cho 30 ngày tiếp theo:")
+print("Dự đoán giá bạch kim cho 30 ngày tiếp theo:")
 print(future_data)
 
 
@@ -171,8 +170,8 @@ plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot,
 # Vẽ biểu đồ
 ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
   geom_line() +
-  labs(title = "Silver Price Predictions: Train, Test, Validate, and Next 30 Days",
-       x = "Index", y = "Silver Price") +
+  labs(title = "Platinum Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Platinum Price") +
   scale_color_manual(values = c("Train" = "blue", 
                                 "Test" = "green", 
                                 "Validate" = "purple", 
@@ -183,7 +182,7 @@ ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
 
 # Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
 future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
-print("Dự đoán giá bạc cho 30 ngày tiếp theo:")
+print("Dự đoán giá bạch kim cho 30 ngày tiếp theo:")
 print(future_data)
 
 
@@ -256,8 +255,8 @@ plot_data <- rbind(train_data_plot, test_data_plot, validate_data_plot,
 # Vẽ biểu đồ
 ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
   geom_line() +
-  labs(title = "Silver Price Predictions: Train, Test, Validate, and Next 30 Days",
-       x = "Index", y = "Silver Price") +
+  labs(title = "Platinum Price Predictions: Train, Test, Validate, and Next 30 Days",
+       x = "Index", y = "Platinum Price") +
   scale_color_manual(values = c("Train" = "blue", 
                                 "Test" = "green", 
                                 "Validate" = "purple", 
@@ -268,7 +267,7 @@ ggplot(plot_data, aes(x = Index, y = Price, color = Type)) +
 
 # Tạo data frame cho dự đoán 30 ngày tiếp theo và in ra kết quả
 future_data <- data.frame(Day = new_indices, Predicted_Price = future_predictions)
-print("Dự đoán giá bạc cho 30 ngày tiếp theo:")
+print("Dự đoán giá bạch kim cho 30 ngày tiếp theo:")
 print(future_data)
 
 
