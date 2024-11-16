@@ -37,6 +37,9 @@ boxplot(close,
         ylab = "Closing Price",                     
         col = "#c7675d") 
 
+# Load data from CSV file
+data <- read.csv("D:/Thái/Phân tích thống kê/Silver_data_filtered.csv")
+data$date <- as.Date(data$date, format = "%m/%d/%Y")
 # Create a Scatter Plot of Closing Price over Time
 plot(data$date, data$close, 
      main = "Scatter Plot of Closing Price Over Time",  
@@ -44,6 +47,8 @@ plot(data$date, data$close,
      ylab = "Closing Price",                            
      col = "#c7675d",                                   
      pch = 16)
+
+
 
 
 

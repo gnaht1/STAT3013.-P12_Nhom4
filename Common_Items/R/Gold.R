@@ -37,6 +37,24 @@ boxplot(close,
         ylab = "Closing Price",                     
         col = "#c7675d") 
 
+# Kiểm tra và làm sạch dữ liệu
+data <- na.omit(data)  # Loại bỏ các hàng chứa NA
+data$date <- as.Date(data$date, format = "%Y-%m-%d")  # Chuyển đổi cột 'date' sang định dạng Date
+
+# Kiểm tra lại nếu có giá trị không hợp lệ
+if (all(is.na(data$date))) {
+  stop("Cột 'date' không hợp lệ hoặc không có giá trị.")
+}
+if (all(is.na(data$close))) {
+  stop("Cột 'close' không hợp lệ hoặc không có giá trị.")
+}
+
+# Trích xuất năm từ cột 'date'
+data$year <- format(data$date, "%Y")  # Trích xuất năm từ ngày tháng
+
+# Load data from CSV file
+data <- read.csv("D:/Thái/Phân tích thống kê/Gold_data_filtered.csv")
+data$date <- as.Date(data$date, format = "%m/%d/%Y")
 # Create a Scatter Plot of Closing Price over Time
 plot(data$date, data$close, 
      main = "Scatter Plot of Closing Price Over Time",  
@@ -44,6 +62,8 @@ plot(data$date, data$close,
      ylab = "Closing Price",                            
      col = "#c7675d",                                   
      pch = 16)
+
+
 
 
 
