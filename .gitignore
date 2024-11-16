@@ -1,2 +1,5 @@
+# Ignore Word temp files
+~$*.docx
 
-LR/R/.Rhistory
+# Ignore R history files
+.Rhistory
